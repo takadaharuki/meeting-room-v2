@@ -1,13 +1,16 @@
 import argparse
 import audioop
 import json
+import sys
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
-from app.core.config import get_settings
+BACKEND_DIR = Path(__file__).resolve().parents[3]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
+from app.core.config import get_settings  # noqa: E402
 
 EXPERIMENTS_DIR = Path(__file__).resolve().parent
 DEFAULT_SCENARIO = EXPERIMENTS_DIR / "scenarios" / "four_speakers_short_overlap.json"

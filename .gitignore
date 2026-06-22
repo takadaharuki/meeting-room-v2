@@ -7,7 +7,9 @@ __pycache__/
 backend/.venv/
 frontend/node_modules/
 frontend/dist/
-backend/app/experiments/generated/*
-!backend/app/experiments/generated/.gitkeep
-backend/app/experiments/results/*
-!backend/app/experiments/results/.gitkeep
+backend/app/experiments/experiment-soniox/generated/*
+!backend/app/experiments/experiment-soniox/generated/.gitkeep
+backend/app/experiments/experiment-soniox/results/*
+!backend/app/experiments/experiment-soniox/results/.gitkeep
+backend/app/experiments/experiment-realtime2/results/*
+!backend/app/experiments/experiment-realtime2/results/.gitkeep

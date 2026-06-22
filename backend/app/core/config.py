@@ -16,6 +16,13 @@ class Settings(BaseSettings):
 
     openai_api_key: str | None = None
     openai_tts_model: str = "gpt-4o-mini-tts"
+    openai_realtime_websocket_url: str = "wss://api.openai.com/v1/realtime"
+    openai_realtime_model: str = "gpt-realtime-2"
+    openai_realtime_voice: str = "marin"
+    openai_realtime_reasoning_effort: Literal["minimal", "low", "medium", "high"] = (
+        "low"
+    )
+    openai_realtime_output_sample_rate: int = Field(default=24000, gt=0)
 
     soniox_api_key: str | None = None
     soniox_websocket_url: str = "wss://stt-rt.soniox.com/transcribe-websocket"

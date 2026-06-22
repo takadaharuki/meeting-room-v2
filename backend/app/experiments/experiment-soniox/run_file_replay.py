@@ -1,12 +1,17 @@
 import argparse
 import asyncio
 import json
+import sys
 from pathlib import Path
 
-from app.core.config import get_settings
-from app.experiments.file_replay import read_wav_info, wav_pcm_frames
-from app.soniox.client import SonioxRealtimeClient
+BACKEND_DIR = Path(__file__).resolve().parents[3]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
+from file_replay import read_wav_info, wav_pcm_frames  # noqa: E402
+
+from app.core.config import get_settings  # noqa: E402
+from app.soniox.client import SonioxRealtimeClient  # noqa: E402
 
 EXPERIMENTS_DIR = Path(__file__).resolve().parent
 DEFAULT_WAV = EXPERIMENTS_DIR / "generated" / "four_speakers_short_overlap.wav"
