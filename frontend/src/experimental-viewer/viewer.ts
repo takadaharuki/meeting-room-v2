@@ -118,13 +118,18 @@ function renderSegment(event: TranscriptEvent): string {
   const speaker = event.speaker_label === null ? "Speaker ?" : `Speaker ${event.speaker_label}`;
   const finalClass = event.is_final ? "final" : "delta";
   const status = event.is_final ? "final" : "live";
+  const text = stripEndpointToken(event.text);
   return `
     <section class="segment ${finalClass}">
       <div class="speaker">${escapeHtml(speaker)}</div>
-      <p>${escapeHtml(event.text)}</p>
+      <p>${escapeHtml(text)}</p>
       <span>${status}</span>
     </section>
   `;
+}
+
+function stripEndpointToken(text: string): string {
+  return text.replaceAll("<end>", "").trim();
 }
 
 function setText(id: string, value: string): void {

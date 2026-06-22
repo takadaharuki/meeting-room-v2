@@ -20,6 +20,7 @@ class TranscriptEvent:
     speaker_label: str | None
     text: str
     is_final: bool
+    endpoint_detected: bool
     start_ms: int | None
     end_ms: int | None
     server_timestamp_ms: int
@@ -32,6 +33,7 @@ class TranscriptEvent:
             "speaker_label": self.speaker_label,
             "text": self.text,
             "is_final": self.is_final,
+            "endpoint_detected": self.endpoint_detected,
             "start_ms": self.start_ms,
             "end_ms": self.end_ms,
             "server_timestamp_ms": self.server_timestamp_ms,
@@ -136,18 +138,27 @@ class SonioxRealtimeClient:
         if not valid_tokens:
             return None
 
+        endpoint_detected = any(
+            token.get("text") == "<end>" for token in valid_tokens
+        )
+        transcript_tokens = [
+            token for token in valid_tokens if token.get("text") != "<end>"
+        ]
+        if not transcript_tokens and endpoint_detected:
+            return None
+
         text = "".join(
             token.get("text", "")
-            for token in valid_tokens
+            for token in transcript_tokens
             if isinstance(token.get("text"), str)
         )
         if not text:
             return None
 
         is_final = all(token.get("is_final") is True for token in valid_tokens)
-        speaker_label = self._speaker_label(valid_tokens)
-        start_ms = self._min_ms(valid_tokens, "start_ms")
-        end_ms = self._max_ms(valid_tokens, "end_ms")
+        speaker_label = self._speaker_label(transcript_tokens)
+        start_ms = self._min_ms(transcript_tokens, "start_ms")
+        end_ms = self._max_ms(transcript_tokens, "end_ms")
 
         return TranscriptEvent(
             type="transcript.final" if is_final else "transcript.delta",
@@ -156,6 +167,7 @@ class SonioxRealtimeClient:
             speaker_label=speaker_label,
             text=text,
             is_final=is_final,
+            endpoint_detected=endpoint_detected,
             start_ms=start_ms,
             end_ms=end_ms,
             server_timestamp_ms=current_timestamp_ms(),

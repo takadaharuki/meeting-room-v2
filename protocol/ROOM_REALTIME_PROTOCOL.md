@@ -56,6 +56,7 @@ segment_id
 text
 speaker_label
 is_final
+endpoint_detected
 server_timestamp_ms
 ```
 
@@ -116,6 +117,7 @@ Partial transcript for a segment.
   "speaker_label": "1",
   "text": "今日の議題は",
   "is_final": false,
+  "endpoint_detected": false,
   "start_ms": 1200,
   "end_ms": 2400,
   "server_timestamp_ms": 1710000000000
@@ -131,6 +133,7 @@ segment_id: backend-assigned stable segment id
 speaker_label: Soniox speaker label normalized as a string
 text: partial text for this segment
 is_final: false
+endpoint_detected: whether Soniox endpoint detection appeared in this response
 start_ms: optional audio-relative start time from provider
 end_ms: optional audio-relative end time from provider
 server_timestamp_ms: backend emission time
@@ -150,6 +153,7 @@ Final transcript for a segment.
   "speaker_label": "1",
   "text": "今日の議題は予算についてです。",
   "is_final": true,
+  "endpoint_detected": true,
   "start_ms": 1200,
   "end_ms": 4300,
   "server_timestamp_ms": 1710000001200
@@ -165,12 +169,15 @@ segment_id: backend-assigned stable segment id
 speaker_label: Soniox speaker label normalized as a string
 text: final text for this segment
 is_final: true
+endpoint_detected: whether Soniox endpoint detection appeared in this response
 start_ms: optional audio-relative start time from provider
 end_ms: optional audio-relative end time from provider
 server_timestamp_ms: backend emission time
 ```
 
 When `transcript.final` arrives, the frontend should replace any existing delta for the same `segment_id` and mark the segment as final.
+
+Soniox may return a special `<end>` token when endpoint detection decides that an utterance has ended. The backend must not include `<end>` in transcript `text`. Instead, it exposes the signal through `endpoint_detected`. This field is intended for later voice agent turn-taking logic.
 
 ## Speaker Label Rules
 

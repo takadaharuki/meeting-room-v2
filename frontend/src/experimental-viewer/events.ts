@@ -28,6 +28,7 @@ export type TranscriptEvent = {
   speaker_label: string | null;
   text: string;
   is_final: boolean;
+  endpoint_detected?: boolean;
   start_ms?: number | null;
   end_ms?: number | null;
   server_timestamp_ms: number;
