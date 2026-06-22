@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.local
+__pycache__/
+*.pyc
+
+backend/.venv/
+backend/app/experiments/generated/*
+!backend/app/experiments/generated/.gitkeep
+backend/app/experiments/results/*
+!backend/app/experiments/results/.gitkeep

@@ -1,0 +1,82 @@
+{
+  "id": "four_speakers_short_overlap",
+  "description": "4人の短い会議。確認や相槌で短い発話重なりが発生する。",
+  "sample_rate": 24000,
+  "speakers": [
+    {
+      "id": "A",
+      "name": "佐藤",
+      "voice": "onyx",
+      "speed": 0.95,
+      "instructions": "低めで落ち着いた男性の声。会議で丁寧に説明する話し方。"
+    },
+    {
+      "id": "B",
+      "name": "田中",
+      "voice": "nova",
+      "speed": 1.05,
+      "instructions": "明るく聞き取りやすい女性の声。要点をはっきり話す。"
+    },
+    {
+      "id": "C",
+      "name": "鈴木",
+      "voice": "echo",
+      "speed": 1.15,
+      "instructions": "少し早口の男性の声。確認事項を短く述べる。"
+    },
+    {
+      "id": "D",
+      "name": "高橋",
+      "voice": "shimmer",
+      "speed": 0.9,
+      "instructions": "穏やかで落ち着いた女性の声。ゆっくり補足する。"
+    }
+  ],
+  "utterances": [
+    {
+      "speaker": "A",
+      "start_ms": 0,
+      "text": "今日の議題は、来月の予算配分についてです。まず全体の上限を確認します。"
+    },
+    {
+      "speaker": "B",
+      "start_ms": 3600,
+      "text": "はい。採用費だけ、先に確認したいです。"
+    },
+    {
+      "speaker": "C",
+      "start_ms": 6100,
+      "text": "すみません、そこは資料の三ページですね。"
+    },
+    {
+      "speaker": "D",
+      "start_ms": 6350,
+      "text": "三ページで合っています。"
+    },
+    {
+      "speaker": "A",
+      "start_ms": 8800,
+      "text": "ありがとうございます。では採用費は前月比で一割増までにしましょう。"
+    },
+    {
+      "speaker": "B",
+      "start_ms": 12000,
+      "text": "一割増であれば、今月の候補者数には対応できます。"
+    },
+    {
+      "speaker": "C",
+      "start_ms": 14500,
+      "text": "ただし広告費は別枠で見た方がよいと思います。"
+    },
+    {
+      "speaker": "D",
+      "start_ms": 14850,
+      "text": "はい、広告費は変動が大きいです。"
+    },
+    {
+      "speaker": "A",
+      "start_ms": 17500,
+      "text": "では広告費だけ別途試算して、次回の会議で判断しましょう。"
+    }
+  ]
+}

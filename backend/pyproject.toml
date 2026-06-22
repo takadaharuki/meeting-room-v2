@@ -1,0 +1,21 @@
+[project]
+name = "meeting-room-v2-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "openai>=2.0",
+  "pydantic>=2.0",
+  "pydantic-settings>=2.0",
+  "sounddevice>=0.5.0",
+  "websockets>=14.0",
+]
+
+[project.scripts]
+meeting-room-soniox = "app.main:main"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
