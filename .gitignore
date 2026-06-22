@@ -5,6 +5,8 @@ __pycache__/
 *.pyc
 
 backend/.venv/
+frontend/node_modules/
+frontend/dist/
 backend/app/experiments/generated/*
 !backend/app/experiments/generated/.gitkeep
 backend/app/experiments/results/*

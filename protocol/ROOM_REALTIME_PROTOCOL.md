@@ -20,6 +20,14 @@ Mac room microphone
 
 Raw Soniox payloads are not part of the frontend protocol. The backend normalizes Soniox tokens into project-owned events before broadcasting them.
 
+The initial viewer transport is a backend WebSocket endpoint:
+
+```text
+GET /ws/viewer
+```
+
+This endpoint is for the initial local viewer. It may be replaced by a different frontend or transport in production, but the normalized event shapes in this document should remain project-owned.
+
 ## Non-Goals
 
 - iPhone device clients.
@@ -37,6 +45,13 @@ All backend-to-viewer events include:
 ```text
 type
 meeting_id
+server_timestamp_ms
+```
+
+Transcript events additionally include:
+
+```text
+meeting_id
 segment_id
 text
 speaker_label
@@ -47,6 +62,47 @@ server_timestamp_ms
 `server_timestamp_ms` is the backend wall-clock time in milliseconds when the normalized event is emitted.
 
 `speaker_label` is the provider-derived diarization label, such as `"1"` or `"2"`. It is not a participant identity. A later assignment flow may map it to a participant, but the mapping must remain editable.
+
+## session.started
+
+Sent when the backend starts a room microphone transcription session.
+
+```json
+{
+  "type": "session.started",
+  "meeting_id": "meeting_001",
+  "soniox_model": "stt-rt-v5",
+  "sample_rate": 16000,
+  "frame_ms": 100,
+  "server_timestamp_ms": 1710000000000
+}
+```
+
+## session.ended
+
+Sent when the backend stops the room microphone transcription session.
+
+```json
+{
+  "type": "session.ended",
+  "meeting_id": "meeting_001",
+  "reason": "shutdown",
+  "server_timestamp_ms": 1710000000000
+}
+```
+
+## transcription.error
+
+Sent when microphone capture, Soniox connection, or transcription processing fails.
+
+```json
+{
+  "type": "transcription.error",
+  "meeting_id": "meeting_001",
+  "message": "SONIOX_API_KEY is not set",
+  "server_timestamp_ms": 1710000000000
+}
+```
 
 ## transcript.delta
 
@@ -129,3 +185,15 @@ When `transcript.final` arrives, the frontend should replace any existing delta 
 The frontend protocol must not depend on raw Soniox payload shape.
 
 If raw provider debugging becomes necessary later, add a separate development-only event that includes only safe metadata, not audio and not full provider payloads.
+
+## Storage Policy
+
+Initial storage policy:
+
+```text
+raw audio: not stored
+normalized transcript events: memory only for viewer replay
+development JSONL logs: written only when an explicit CLI option requests it
+```
+
+The experimental frontend must not add storage. Persistent transcript storage is a later product decision.

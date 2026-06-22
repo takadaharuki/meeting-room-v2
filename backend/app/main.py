@@ -1,13 +1,100 @@
 import argparse
 import asyncio
+from contextlib import asynccontextmanager
 import json
 import sys
 from pathlib import Path
 from typing import TextIO
 
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+
 from app.audio.mic_capture import microphone_pcm_frames
 from app.core.config import Settings, get_settings
 from app.soniox.client import SonioxRealtimeClient, TranscriptEvent
+from app.viewer import viewer_hub
+
+
+def current_timestamp_ms() -> int:
+    import time
+
+    return time.time_ns() // 1_000_000
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(run_viewer_transcription())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.websocket("/ws/viewer")
+async def viewer_websocket(websocket: WebSocket) -> None:
+    await viewer_hub.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await viewer_hub.disconnect(websocket)
+
+
+async def run_viewer_transcription() -> None:
+    settings = get_settings()
+    await viewer_hub.broadcast(
+        {
+            "type": "session.started",
+            "meeting_id": settings.meeting_id,
+            "soniox_model": settings.soniox_model,
+            "sample_rate": settings.audio_sample_rate,
+            "frame_ms": settings.audio_frame_ms,
+            "server_timestamp_ms": current_timestamp_ms(),
+        }
+    )
+
+    try:
+        client = SonioxRealtimeClient(settings=settings)
+        audio_frames = microphone_pcm_frames(
+            sample_rate=settings.audio_sample_rate,
+            channels=settings.audio_channels,
+            frame_ms=settings.audio_frame_ms,
+            device=settings.audio_input_device,
+        )
+        async for event in client.transcribe(audio_frames):
+            await viewer_hub.broadcast(event.as_dict())
+    except asyncio.CancelledError:
+        await viewer_hub.broadcast(
+            {
+                "type": "session.ended",
+                "meeting_id": settings.meeting_id,
+                "reason": "shutdown",
+                "server_timestamp_ms": current_timestamp_ms(),
+            }
+        )
+        raise
+    except Exception as exc:
+        await viewer_hub.broadcast(
+            {
+                "type": "transcription.error",
+                "meeting_id": settings.meeting_id,
+                "message": str(exc),
+                "server_timestamp_ms": current_timestamp_ms(),
+            }
+        )
 
 
 def parse_args() -> argparse.Namespace:
