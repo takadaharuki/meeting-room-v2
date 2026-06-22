@@ -11,7 +11,7 @@ if str(BACKEND_DIR) not in sys.path:
 from file_replay import read_wav_info, wav_pcm_frames  # noqa: E402
 
 from app.core.config import get_settings  # noqa: E402
-from app.soniox.client import SonioxRealtimeClient  # noqa: E402
+from app.soniox.client import SonioxRealtimeClient, TranscriptEvent  # noqa: E402
 
 EXPERIMENTS_DIR = Path(__file__).resolve().parent
 DEFAULT_WAV = EXPERIMENTS_DIR / "generated" / "four_speakers_short_overlap.wav"
@@ -40,6 +40,8 @@ async def run() -> None:
 
     with result_path.open("w", encoding="utf-8") as output:
         async for event in client.transcribe(frames):
+            if not isinstance(event, TranscriptEvent):
+                continue
             payload = event.as_dict()
             line = json.dumps(payload, ensure_ascii=False)
             print(line, flush=True)

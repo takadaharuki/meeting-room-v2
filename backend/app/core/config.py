@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     )
     openai_realtime_output_sample_rate: int = Field(default=24000, gt=0)
 
+    voice_agent_enabled: bool = False
+    voice_agent_silence_ms: int = Field(default=1500, ge=100)
+    voice_agent_cooldown_ms: int = Field(default=15000, ge=0)
+    voice_agent_post_agent_mute_ms: int = Field(default=5000, ge=0)
+    voice_agent_min_transcript_chars: int = Field(default=8, ge=1)
+    voice_agent_realtime_timeout_ms: int = Field(default=30000, ge=1000)
+
     soniox_api_key: str | None = None
     soniox_websocket_url: str = "wss://stt-rt.soniox.com/transcribe-websocket"
     soniox_model: str = "stt-rt-v5"

@@ -40,6 +40,25 @@ class TranscriptEvent:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class TurnEndedEvent:
+    type: Literal["turn.ended"]
+    meeting_id: str
+    endpoint_detected: bool
+    server_timestamp_ms: int
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "type": self.type,
+            "meeting_id": self.meeting_id,
+            "endpoint_detected": self.endpoint_detected,
+            "server_timestamp_ms": self.server_timestamp_ms,
+        }
+
+
+SonioxEvent = TranscriptEvent | TurnEndedEvent
+
+
 class SonioxClientError(RuntimeError):
     pass
 
@@ -53,7 +72,7 @@ class SonioxRealtimeClient:
     async def transcribe(
         self,
         audio_frames: AsyncIterator[bytes],
-    ) -> AsyncIterator[TranscriptEvent]:
+    ) -> AsyncIterator[SonioxEvent]:
         if not self._settings.soniox_api_key:
             raise SonioxClientError("SONIOX_API_KEY is not set")
 
@@ -129,7 +148,7 @@ class SonioxRealtimeClient:
         error_message = response.get("error_message") or "Soniox returned an error"
         raise SonioxClientError(f"{error_type}: {error_message}")
 
-    def _response_to_event(self, response: dict[str, Any]) -> TranscriptEvent | None:
+    def _response_to_event(self, response: dict[str, Any]) -> SonioxEvent | None:
         tokens = response.get("tokens")
         if not isinstance(tokens, list) or not tokens:
             return None
@@ -145,7 +164,12 @@ class SonioxRealtimeClient:
             token for token in valid_tokens if token.get("text") != "<end>"
         ]
         if not transcript_tokens and endpoint_detected:
-            return None
+            return TurnEndedEvent(
+                type="turn.ended",
+                meeting_id=self._settings.meeting_id,
+                endpoint_detected=True,
+                server_timestamp_ms=current_timestamp_ms(),
+            )
 
         text = "".join(
             token.get("text", "")

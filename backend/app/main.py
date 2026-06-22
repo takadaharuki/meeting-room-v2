@@ -1,8 +1,8 @@
 import argparse
 import asyncio
-from contextlib import asynccontextmanager
 import json
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TextIO
 
@@ -10,8 +10,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from app.audio.mic_capture import microphone_pcm_frames
 from app.core.config import Settings, get_settings
-from app.soniox.client import SonioxRealtimeClient, TranscriptEvent
+from app.soniox.client import SonioxEvent, SonioxRealtimeClient, TranscriptEvent
 from app.viewer import viewer_hub
+from app.voice_agent.orchestrator import VoiceAgentOrchestrator
 
 
 def current_timestamp_ms() -> int:
@@ -66,6 +67,7 @@ async def run_viewer_transcription() -> None:
         }
     )
 
+    voice_agent = VoiceAgentOrchestrator(settings=settings)
     try:
         client = SonioxRealtimeClient(settings=settings)
         audio_frames = microphone_pcm_frames(
@@ -75,8 +77,11 @@ async def run_viewer_transcription() -> None:
             device=settings.audio_input_device,
         )
         async for event in client.transcribe(audio_frames):
-            await viewer_hub.broadcast(event.as_dict())
+            await voice_agent.handle_soniox_event(event)
+            if isinstance(event, TranscriptEvent):
+                await viewer_hub.broadcast(event.as_dict())
     except asyncio.CancelledError:
+        await voice_agent.aclose()
         await viewer_hub.broadcast(
             {
                 "type": "session.ended",
@@ -87,6 +92,7 @@ async def run_viewer_transcription() -> None:
         )
         raise
     except Exception as exc:
+        await voice_agent.aclose()
         await viewer_hub.broadcast(
             {
                 "type": "transcription.error",
@@ -139,6 +145,8 @@ async def run_soniox_console(
 
     try:
         async for event in client.transcribe(audio_frames):
+            if not isinstance(event, TranscriptEvent):
+                continue
             line = json.dumps(event.as_dict(), ensure_ascii=False)
             if console_format == "jsonl":
                 print(line, flush=True)
@@ -170,10 +178,22 @@ def print_startup_settings(
     print(f"  frame_ms: {settings.audio_frame_ms}", file=sys.stderr)
     print(f"  input_device: {input_device}", file=sys.stderr)
     print(f"  jsonl_output: {output}", file=sys.stderr)
+    print(f"  voice_agent_enabled: {settings.voice_agent_enabled}", file=sys.stderr)
+    if settings.voice_agent_enabled:
+        print(
+            f"  voice_agent_silence_ms: {settings.voice_agent_silence_ms}",
+            file=sys.stderr,
+        )
+        print(
+            f"  voice_agent_cooldown_ms: {settings.voice_agent_cooldown_ms}",
+            file=sys.stderr,
+        )
     print("Press Ctrl+C to stop.", file=sys.stderr)
 
 
-def format_pretty_event(event: TranscriptEvent) -> str:
+def format_pretty_event(event: SonioxEvent) -> str:
+    if not isinstance(event, TranscriptEvent):
+        return "[turn-end]"
     speaker = f"Speaker {event.speaker_label}" if event.speaker_label else "Speaker ?"
     status = "final" if event.is_final else "delta"
     return f"[{status}] {speaker}: {event.text}"
