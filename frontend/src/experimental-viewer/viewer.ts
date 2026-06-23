@@ -2,6 +2,7 @@ import {
   parseViewerEvent,
   type Participant,
   type SpeakerMapEntry,
+  type SpeakerStatsEntry,
   type TranscriptEvent,
   type ViewerEvent,
 } from "./events";
@@ -26,6 +27,7 @@ type ViewerState = {
   order: string[];
   participants: Participant[];
   speakerMap: Record<string, SpeakerMapEntry>;
+  speakerStats: SpeakerStatsEntry[];
   intros: Record<string, IntroState>;
   unassignedSpeakers: Set<string>;
 };
@@ -44,6 +46,7 @@ export function mountExperimentalViewer(root: HTMLElement): void {
     order: [],
     participants: [],
     speakerMap: {},
+    speakerStats: [],
     intros: {},
     unassignedSpeakers: new Set(),
   };
@@ -181,6 +184,11 @@ function applyEvent(state: ViewerState, event: ViewerEvent): void {
 
   if (event.type === "speaker.intro.cancelled") {
     delete state.intros[event.participant_id];
+    return;
+  }
+
+  if (event.type === "speaker.stats.updated") {
+    state.speakerStats = event.stats;
   }
 }
 
@@ -204,6 +212,7 @@ function render(state: ViewerState): void {
   }
 
   renderSetup(state);
+  renderStats(state);
   renderTranscript(state);
 }
 
@@ -378,6 +387,48 @@ function renderTranscript(state: ViewerState): void {
   transcript.scrollTop = transcript.scrollHeight;
 }
 
+function renderStats(state: ViewerState): void {
+  const stats = document.querySelector<HTMLDivElement>("#speaker-stats");
+  if (stats === null) {
+    return;
+  }
+
+  if (state.speakerStats.length === 0) {
+    stats.innerHTML = `<p class="empty compact">No speaking stats yet.</p>`;
+    return;
+  }
+
+  stats.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Speaker</th>
+          <th>Turns</th>
+          <th>Chars</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${state.speakerStats.map(renderStatsRow).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderStatsRow(entry: SpeakerStatsEntry): string {
+  const speaker =
+    entry.display_name ??
+    (entry.speaker_label === null ? "Unknown" : `Speaker ${entry.speaker_label}`);
+  return `
+    <tr>
+      <td>${escapeHtml(speaker)}</td>
+      <td>${entry.utterance_count}</td>
+      <td>${entry.text_chars}</td>
+      <td>${formatDuration(entry.estimated_speech_ms)}</td>
+    </tr>
+  `;
+}
+
 function renderSegment(event: TranscriptEvent): string {
   const fallbackSpeaker =
     event.speaker_label === null ? "Speaker ?" : `Speaker ${event.speaker_label}`;
@@ -500,6 +551,16 @@ function stripEndpointToken(text: string): string {
   return text.replaceAll("<end>", "").trim();
 }
 
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) {
+    return `${seconds}s`;
+  }
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
 function setText(id: string, value: string): void {
   const element = document.querySelector<HTMLElement>(`#${id}`);
   if (element !== null) {
@@ -573,6 +634,10 @@ function layout(): string {
         </div>
       </section>
       <section id="live-panel" class="live-panel" hidden>
+        <section class="stats-panel">
+          <h2>Speaking Stats</h2>
+          <div id="speaker-stats"></div>
+        </section>
         <div id="transcript" class="transcript" aria-live="polite"></div>
       </section>
     </div>

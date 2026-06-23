@@ -289,6 +289,39 @@ Confirms a candidate or manually maps a Soniox speaker label to a participant.
 }
 ```
 
+## Speaker Stats
+
+`speaker.stats.updated` is emitted after `transcript.final` events outside the
+self-introduction setup flow. Deltas are not counted.
+
+```json
+{
+  "type": "speaker.stats.updated",
+  "meeting_id": "meeting_001",
+  "stats": [
+    {
+      "speaker_key": "participant:p_001",
+      "participant_id": "p_001",
+      "display_name": "田中",
+      "speaker_label": "1",
+      "utterance_count": 12,
+      "text_chars": 430,
+      "estimated_speech_ms": 85000,
+      "last_spoke_at_ms": 1710000000000
+    }
+  ],
+  "server_timestamp_ms": 1710000000000
+}
+```
+
+Fields:
+
+```text
+utterance_count: count of final transcript segments
+text_chars: total character count from final transcript text
+estimated_speech_ms: sum of end_ms - start_ms when both are available
+```
+
 ## Raw Provider Payloads
 
 The frontend protocol must not depend on raw Soniox payload shape.

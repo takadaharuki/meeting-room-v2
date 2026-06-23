@@ -12,6 +12,7 @@ from app.audio.mic_capture import microphone_pcm_frames
 from app.core.config import Settings, get_settings
 from app.soniox.client import SonioxEvent, SonioxRealtimeClient, TranscriptEvent
 from app.speakers.registry import SpeakerRegistry
+from app.speakers.stats import SpeakerStats
 from app.viewer import viewer_hub
 from app.voice_agent.orchestrator import VoiceAgentOrchestrator
 
@@ -36,6 +37,7 @@ async def lifespan(app: FastAPI):
 
 
 speaker_registry = SpeakerRegistry(settings=get_settings())
+speaker_stats = SpeakerStats(settings=get_settings())
 app = FastAPI(lifespan=lifespan)
 
 
@@ -49,6 +51,7 @@ async def viewer_websocket(websocket: WebSocket) -> None:
     await viewer_hub.connect(websocket)
     for event in await speaker_registry.state_events():
         await websocket.send_json(event)
+    await websocket.send_json(speaker_stats.as_event())
     try:
         while True:
             raw_message = await websocket.receive_text()
@@ -84,6 +87,7 @@ async def run_viewer_transcription() -> None:
     )
     for event in await speaker_registry.state_events():
         await viewer_hub.broadcast(event)
+    await viewer_hub.broadcast(speaker_stats.as_event())
 
     voice_agent = VoiceAgentOrchestrator(settings=settings)
     try:
@@ -102,6 +106,10 @@ async def run_viewer_transcription() -> None:
                 for registry_event in registry_events:
                     await viewer_hub.broadcast(registry_event)
                 await viewer_hub.broadcast(enriched)
+                if await should_stats_handle(registry_events):
+                    stats_event = speaker_stats.update_from_transcript(enriched)
+                    if stats_event is not None:
+                        await viewer_hub.broadcast(stats_event)
                 if await should_voice_agent_handle(event, registry_events):
                     display_name = enriched.get("display_name")
                     await voice_agent.handle_soniox_event(
@@ -151,6 +159,17 @@ async def should_voice_agent_handle(
     if await speaker_registry.is_agent_speaker(event.speaker_label):
         return False
     return True
+
+
+async def should_stats_handle(registry_events: list[dict[str, object]]) -> bool:
+    ignored_event_types = {
+        "speaker.intro.candidate_detected",
+        "speaker.intro.completed",
+        "speaker.intro.expired",
+    }
+    if any(item.get("type") in ignored_event_types for item in registry_events):
+        return False
+    return not await speaker_registry.is_intro_active()
 
 
 def parse_args() -> argparse.Namespace:

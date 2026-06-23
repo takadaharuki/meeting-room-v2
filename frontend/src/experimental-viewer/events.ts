@@ -115,6 +115,24 @@ export type SpeakerIntroCancelledEvent = {
   server_timestamp_ms: number;
 };
 
+export type SpeakerStatsEntry = {
+  speaker_key: string;
+  participant_id: string | null;
+  display_name: string | null;
+  speaker_label: string | null;
+  utterance_count: number;
+  text_chars: number;
+  estimated_speech_ms: number;
+  last_spoke_at_ms: number | null;
+};
+
+export type SpeakerStatsUpdatedEvent = {
+  type: "speaker.stats.updated";
+  meeting_id: string;
+  stats: SpeakerStatsEntry[];
+  server_timestamp_ms: number;
+};
+
 export type ViewerEvent =
   | SessionStartedEvent
   | SessionEndedEvent
@@ -127,7 +145,8 @@ export type ViewerEvent =
   | SpeakerIntroCandidateDetectedEvent
   | SpeakerIntroCompletedEvent
   | SpeakerIntroExpiredEvent
-  | SpeakerIntroCancelledEvent;
+  | SpeakerIntroCancelledEvent
+  | SpeakerStatsUpdatedEvent;
 
 export function parseViewerEvent(value: unknown): ViewerEvent | null {
   if (!isRecord(value) || typeof value.type !== "string") {
@@ -148,6 +167,7 @@ export function parseViewerEvent(value: unknown): ViewerEvent | null {
     case "speaker.intro.completed":
     case "speaker.intro.expired":
     case "speaker.intro.cancelled":
+    case "speaker.stats.updated":
       return value as ViewerEvent;
     default:
       return null;

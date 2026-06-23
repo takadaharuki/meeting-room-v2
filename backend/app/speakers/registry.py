@@ -55,6 +55,7 @@ class IntroSession:
     known_labels: set[str]
     expires_at_ms: int
     candidates: set[str] = field(default_factory=set)
+    expired_notified: bool = False
 
 
 class SpeakerRegistry:
@@ -256,6 +257,8 @@ class SpeakerRegistry:
     ) -> dict[str, Any] | None:
         if speaker_label is None or self._active_intro is None:
             return None
+        if current_timestamp_ms() >= self._active_intro.expires_at_ms:
+            return None
         if speaker_label in self._active_intro.known_labels:
             return None
         if speaker_label in self._speaker_map:
@@ -338,9 +341,11 @@ class SpeakerRegistry:
             return
         if current_timestamp_ms() < self._active_intro.expires_at_ms:
             return
+        if self._active_intro.expired_notified:
+            return
         participant_id = self._active_intro.participant_id
         candidates = sorted(self._active_intro.candidates)
-        self._active_intro = None
+        self._active_intro.expired_notified = True
         events.append(
             {
                 "type": "speaker.intro.expired",

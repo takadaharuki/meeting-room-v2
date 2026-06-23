@@ -216,6 +216,32 @@ button:hover {
   font-size: 13px;
 }
 
+.stats-panel {
+  padding: 16px 24px 8px;
+  border-bottom: 1px solid #e3e6ea;
+  background: #ffffff;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e3e6ea;
+  font-size: 13px;
+  text-align: left;
+}
+
+th {
+  color: #657080;
+  font-size: 12px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
 .transcript {
   overflow: auto;
   padding: 8px 24px 32px;

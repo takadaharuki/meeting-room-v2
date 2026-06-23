@@ -39,3 +39,7 @@ The experimental viewer has `Setup` and `Live` tabs.
 
 Unknown Soniox speaker labels are shown as unassigned and do not create new
 participants automatically.
+
+The `Live` tab also shows memory-only speaking stats per mapped participant or
+unassigned speaker: final utterance count, text character count, and estimated
+speech time from Soniox timestamps.
