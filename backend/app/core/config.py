@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     voice_agent_post_agent_mute_ms: int = Field(default=5000, ge=0)
     voice_agent_min_transcript_chars: int = Field(default=8, ge=1)
     voice_agent_realtime_timeout_ms: int = Field(default=30000, ge=1000)
+    speaker_intro_window_ms: int = Field(default=8000, ge=1000)
 
     soniox_api_key: str | None = None
     soniox_websocket_url: str = "wss://stt-rt.soniox.com/transcribe-websocket"

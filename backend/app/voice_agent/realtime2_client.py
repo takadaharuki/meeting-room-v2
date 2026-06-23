@@ -28,13 +28,27 @@ class Realtime2VoiceAgentClient:
         *,
         on_audio_delta: Callable[[bytes], None],
     ) -> str:
+        return await self.speak_text(
+            context.prompt_text(),
+            on_audio_delta=on_audio_delta,
+        )
+
+    async def speak_text(
+        self,
+        prompt_text: str,
+        *,
+        on_audio_delta: Callable[[bytes], None],
+    ) -> str:
         if not self._settings.openai_api_key:
             raise Realtime2VoiceAgentError("OPENAI_API_KEY is not set")
 
         timeout_sec = self._settings.voice_agent_realtime_timeout_ms / 1000
         try:
             async with asyncio.timeout(timeout_sec):
-                return await self._speak(context, on_audio_delta=on_audio_delta)
+                return await self._speak_text(
+                    prompt_text,
+                    on_audio_delta=on_audio_delta,
+                )
         except Realtime2VoiceAgentError:
             raise
         except TimeoutError as exc:
@@ -42,9 +56,9 @@ class Realtime2VoiceAgentClient:
         except Exception as exc:
             raise Realtime2VoiceAgentError("Realtime2 voice agent failed") from exc
 
-    async def _speak(
+    async def _speak_text(
         self,
-        context: VoiceAgentContext,
+        prompt_text: str,
         *,
         on_audio_delta: Callable[[bytes], None],
     ) -> str:
@@ -57,7 +71,8 @@ class Realtime2VoiceAgentClient:
             max_size=None,
         ) as websocket:
             await websocket.send(json.dumps(self._session_update_payload()))
-            await websocket.send(json.dumps(self._conversation_item_payload(context)))
+            conversation_item = self._conversation_item_payload(prompt_text)
+            await websocket.send(json.dumps(conversation_item))
             await websocket.send(json.dumps(self._response_create_payload()))
 
             async for raw_message in websocket:
@@ -115,7 +130,7 @@ class Realtime2VoiceAgentClient:
 
     def _conversation_item_payload(
         self,
-        context: VoiceAgentContext,
+        prompt_text: str,
     ) -> dict[str, Any]:
         return {
             "type": "conversation.item.create",
@@ -125,7 +140,7 @@ class Realtime2VoiceAgentClient:
                 "content": [
                     {
                         "type": "input_text",
-                        "text": context.prompt_text(),
+                        "text": prompt_text,
                     }
                 ],
             },

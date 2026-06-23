@@ -26,7 +26,12 @@ class VoiceAgentOrchestrator:
         self._last_agent_started_ms = 0
         self._last_agent_finished_ms = 0
 
-    async def handle_soniox_event(self, event: SonioxEvent) -> None:
+    async def handle_soniox_event(
+        self,
+        event: SonioxEvent,
+        *,
+        display_name: str | None = None,
+    ) -> None:
         if not self._settings.voice_agent_enabled:
             return
 
@@ -39,6 +44,7 @@ class VoiceAgentOrchestrator:
                 self._recent_turns.append(
                     TranscriptTurn(
                         speaker_label=event.speaker_label,
+                        display_name=display_name,
                         text=event.text.strip(),
                         server_timestamp_ms=event.server_timestamp_ms,
                     )

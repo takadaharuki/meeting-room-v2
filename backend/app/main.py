@@ -11,6 +11,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from app.audio.mic_capture import microphone_pcm_frames
 from app.core.config import Settings, get_settings
 from app.soniox.client import SonioxEvent, SonioxRealtimeClient, TranscriptEvent
+from app.speakers.registry import SpeakerRegistry
 from app.viewer import viewer_hub
 from app.voice_agent.orchestrator import VoiceAgentOrchestrator
 
@@ -34,6 +35,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
+speaker_registry = SpeakerRegistry(settings=get_settings())
 app = FastAPI(lifespan=lifespan)
 
 
@@ -45,13 +47,27 @@ async def health() -> dict[str, str]:
 @app.websocket("/ws/viewer")
 async def viewer_websocket(websocket: WebSocket) -> None:
     await viewer_hub.connect(websocket)
+    for event in await speaker_registry.state_events():
+        await websocket.send_json(event)
     try:
         while True:
-            await websocket.receive_text()
+            raw_message = await websocket.receive_text()
+            await handle_viewer_message(raw_message)
     except WebSocketDisconnect:
         pass
     finally:
         await viewer_hub.disconnect(websocket)
+
+
+async def handle_viewer_message(raw_message: str) -> None:
+    try:
+        payload = json.loads(raw_message)
+    except json.JSONDecodeError:
+        return
+    if not isinstance(payload, dict):
+        return
+    for event in await speaker_registry.handle_command(payload):
+        await viewer_hub.broadcast(event)
 
 
 async def run_viewer_transcription() -> None:
@@ -66,6 +82,8 @@ async def run_viewer_transcription() -> None:
             "server_timestamp_ms": current_timestamp_ms(),
         }
     )
+    for event in await speaker_registry.state_events():
+        await viewer_hub.broadcast(event)
 
     voice_agent = VoiceAgentOrchestrator(settings=settings)
     try:
@@ -77,9 +95,23 @@ async def run_viewer_transcription() -> None:
             device=settings.audio_input_device,
         )
         async for event in client.transcribe(audio_frames):
-            await voice_agent.handle_soniox_event(event)
             if isinstance(event, TranscriptEvent):
-                await viewer_hub.broadcast(event.as_dict())
+                enriched, registry_events = await speaker_registry.enrich_transcript(
+                    event
+                )
+                for registry_event in registry_events:
+                    await viewer_hub.broadcast(registry_event)
+                await viewer_hub.broadcast(enriched)
+                if await should_voice_agent_handle(event, registry_events):
+                    display_name = enriched.get("display_name")
+                    await voice_agent.handle_soniox_event(
+                        event,
+                        display_name=display_name
+                        if isinstance(display_name, str)
+                        else None,
+                    )
+            elif not await speaker_registry.is_intro_active():
+                await voice_agent.handle_soniox_event(event)
     except asyncio.CancelledError:
         await voice_agent.aclose()
         await viewer_hub.broadcast(
@@ -101,6 +133,24 @@ async def run_viewer_transcription() -> None:
                 "server_timestamp_ms": current_timestamp_ms(),
             }
         )
+
+
+async def should_voice_agent_handle(
+    event: TranscriptEvent,
+    registry_events: list[dict[str, object]],
+) -> bool:
+    ignored_event_types = {
+        "speaker.intro.candidate_detected",
+        "speaker.intro.completed",
+        "speaker.intro.expired",
+    }
+    if any(item.get("type") in ignored_event_types for item in registry_events):
+        return False
+    if await speaker_registry.is_intro_active():
+        return False
+    if await speaker_registry.is_agent_speaker(event.speaker_label):
+        return False
+    return True
 
 
 def parse_args() -> argparse.Namespace:

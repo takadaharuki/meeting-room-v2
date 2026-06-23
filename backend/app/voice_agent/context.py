@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True, slots=True)
 class TranscriptTurn:
     speaker_label: str | None
+    display_name: str | None
     text: str
     server_timestamp_ms: int
 
@@ -28,9 +29,9 @@ class VoiceAgentContext:
         ]
         for turn in self.recent_turns:
             speaker = (
-                f"Speaker {turn.speaker_label}"
-                if turn.speaker_label
-                else "Speaker ?"
+                turn.display_name
+                or (f"Speaker {turn.speaker_label}" if turn.speaker_label else None)
+                or "Speaker ?"
             )
             lines.append(f"{speaker}: {turn.text}")
         lines.extend(

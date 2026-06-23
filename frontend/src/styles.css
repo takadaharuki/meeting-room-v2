@@ -71,6 +71,151 @@ dd {
   font-size: 14px;
 }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 24px 0;
+  background: #ffffff;
+}
+
+.tab {
+  min-height: 36px;
+  border: 1px solid #c7ced8;
+  border-bottom-color: #d9dde3;
+  border-radius: 6px 6px 0 0;
+  padding: 0 16px;
+  background: #eef2f6;
+  color: #384252;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #ffffff;
+  color: #141414;
+}
+
+.setup-panel,
+.live-panel {
+  min-height: 0;
+  overflow: auto;
+}
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(320px, 1fr);
+  gap: 24px;
+  padding: 20px 24px 32px;
+}
+
+.setup-grid section {
+  min-width: 0;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+textarea,
+input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #c7ced8;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: #141414;
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  color: #657080;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+button {
+  min-height: 34px;
+  border: 1px solid #1d5f8f;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: #1f6fa7;
+  color: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #195d8e;
+}
+
+#save-participants {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.participant-row,
+.map-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e3e6ea;
+}
+
+.participant-row b,
+.map-row b {
+  display: block;
+  font-size: 14px;
+}
+
+.participant-row span,
+.map-row span {
+  display: block;
+  margin-top: 2px;
+  color: #657080;
+  font-size: 12px;
+}
+
+.participant-row.active-intro b {
+  color: #1f6fa7;
+}
+
+.participant-row.candidate b {
+  color: #27623a;
+}
+
+.participant-row.failed b,
+.map-row.unassigned b {
+  color: #9a4d0a;
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.compact {
+  margin: 0;
+  font-size: 13px;
+}
+
 .transcript {
   overflow: auto;
   padding: 8px 24px 32px;
@@ -93,6 +238,14 @@ dd {
   color: #24476f;
   font-size: 14px;
   font-weight: 750;
+}
+
+.speaker small {
+  display: block;
+  margin-top: 2px;
+  color: #657080;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .segment p {
@@ -124,6 +277,10 @@ dd {
 
   dl {
     justify-content: flex-start;
+  }
+
+  .setup-grid {
+    grid-template-columns: 1fr;
   }
 
   .segment {

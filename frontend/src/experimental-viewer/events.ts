@@ -26,6 +26,9 @@ export type TranscriptEvent = {
   meeting_id: string;
   segment_id: string;
   speaker_label: string | null;
+  participant_id?: string | null;
+  display_name?: string | null;
+  speaker_status?: "mapped" | "unassigned";
   text: string;
   is_final: boolean;
   endpoint_detected?: boolean;
@@ -34,11 +37,97 @@ export type TranscriptEvent = {
   server_timestamp_ms: number;
 };
 
+export type Participant = {
+  participant_id: string;
+  display_name: string;
+  role: "human" | "agent";
+};
+
+export type ParticipantListUpdatedEvent = {
+  type: "participant.list.updated";
+  meeting_id: string;
+  participants: Participant[];
+  server_timestamp_ms: number;
+};
+
+export type SpeakerMapEntry = {
+  participant_id: string;
+  display_name: string;
+  role: "human" | "agent";
+  source: string;
+};
+
+export type SpeakerMapUpdatedEvent = {
+  type: "speaker.map.updated";
+  meeting_id: string;
+  speaker_map: Record<string, SpeakerMapEntry>;
+  server_timestamp_ms: number;
+};
+
+export type SpeakerUnassignedDetectedEvent = {
+  type: "speaker.unassigned_detected";
+  meeting_id: string;
+  speaker_label: string;
+  server_timestamp_ms: number;
+};
+
+export type SpeakerIntroStartedEvent = {
+  type: "speaker.intro.started";
+  meeting_id: string;
+  participant_id: string;
+  display_name: string;
+  role: "human" | "agent";
+  known_speaker_labels: string[];
+  expires_at_ms: number;
+  server_timestamp_ms: number;
+};
+
+export type SpeakerIntroCandidateDetectedEvent = {
+  type: "speaker.intro.candidate_detected";
+  meeting_id: string;
+  participant_id: string;
+  display_name: string | null;
+  speaker_label: string;
+  candidates: string[];
+  server_timestamp_ms: number;
+};
+
+export type SpeakerIntroCompletedEvent = {
+  type: "speaker.intro.completed";
+  meeting_id: string;
+  participant_id: string;
+  speaker_label: string;
+  server_timestamp_ms: number;
+};
+
+export type SpeakerIntroExpiredEvent = {
+  type: "speaker.intro.expired";
+  meeting_id: string;
+  participant_id: string;
+  candidates: string[];
+  server_timestamp_ms: number;
+};
+
+export type SpeakerIntroCancelledEvent = {
+  type: "speaker.intro.cancelled";
+  meeting_id: string;
+  participant_id: string;
+  server_timestamp_ms: number;
+};
+
 export type ViewerEvent =
   | SessionStartedEvent
   | SessionEndedEvent
   | TranscriptionErrorEvent
-  | TranscriptEvent;
+  | TranscriptEvent
+  | ParticipantListUpdatedEvent
+  | SpeakerMapUpdatedEvent
+  | SpeakerUnassignedDetectedEvent
+  | SpeakerIntroStartedEvent
+  | SpeakerIntroCandidateDetectedEvent
+  | SpeakerIntroCompletedEvent
+  | SpeakerIntroExpiredEvent
+  | SpeakerIntroCancelledEvent;
 
 export function parseViewerEvent(value: unknown): ViewerEvent | null {
   if (!isRecord(value) || typeof value.type !== "string") {
@@ -51,6 +140,14 @@ export function parseViewerEvent(value: unknown): ViewerEvent | null {
     case "transcription.error":
     case "transcript.delta":
     case "transcript.final":
+    case "participant.list.updated":
+    case "speaker.map.updated":
+    case "speaker.unassigned_detected":
+    case "speaker.intro.started":
+    case "speaker.intro.candidate_detected":
+    case "speaker.intro.completed":
+    case "speaker.intro.expired":
+    case "speaker.intro.cancelled":
       return value as ViewerEvent;
     default:
       return null;
