@@ -25,6 +25,46 @@ class VoiceAgentOrchestrator:
         self._agent_speaking = False
         self._last_agent_started_ms = 0
         self._last_agent_finished_ms = 0
+        self._current_player: Pcm16AudioPlayer | None = None
+        self._interrupted = False
+
+    @property
+    def is_speaking(self) -> bool:
+        return self._agent_speaking
+
+    async def interrupt(self, *, reason: str) -> bool:
+        if not self._agent_speaking:
+            return False
+
+        self._interrupted = True
+        if self._current_player is not None:
+            try:
+                self._current_player.abort()
+            except Exception as exc:
+                print(
+                    f"[voice_agent] audio abort failed: {exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        task = self._pending_task
+        if task is not None and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        self._agent_speaking = False
+        self._last_agent_finished_ms = 0
+        self._interrupted = False
+
+        print(
+            f"[voice_agent] interrupted reason={reason}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return True
 
     async def handle_soniox_event(
         self,
@@ -119,16 +159,22 @@ class VoiceAgentOrchestrator:
         )
         transcript = ""
         try:
-            with Pcm16AudioPlayer(
+            player = Pcm16AudioPlayer(
                 sample_rate=self._settings.openai_realtime_output_sample_rate
-            ) as player:
+            )
+            self._current_player = player
+            with player:
                 transcript = await self._client.speak(
                     context,
                     on_audio_delta=player.write,
                 )
         finally:
+            self._current_player = None
             self._agent_speaking = False
-            self._last_agent_finished_ms = current_timestamp_ms()
+            self._last_agent_finished_ms = (
+                0 if self._interrupted else current_timestamp_ms()
+            )
+            self._interrupted = False
 
         if transcript:
             print(

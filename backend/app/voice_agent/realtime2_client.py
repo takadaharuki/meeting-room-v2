@@ -75,33 +75,40 @@ class Realtime2VoiceAgentClient:
             await websocket.send(json.dumps(conversation_item))
             await websocket.send(json.dumps(self._response_create_payload()))
 
-            async for raw_message in websocket:
-                event = self._parse_event(raw_message)
-                event_type = str(event.get("type", ""))
+            try:
+                async for raw_message in websocket:
+                    event = self._parse_event(raw_message)
+                    event_type = str(event.get("type", ""))
 
-                if event_type in {
-                    "response.output_audio.delta",
-                    "response.audio.delta",
-                }:
-                    delta = event.get("delta")
-                    if isinstance(delta, str):
-                        on_audio_delta(base64.b64decode(delta))
-                    continue
+                    if event_type in {
+                        "response.output_audio.delta",
+                        "response.audio.delta",
+                    }:
+                        delta = event.get("delta")
+                        if isinstance(delta, str):
+                            on_audio_delta(base64.b64decode(delta))
+                        continue
 
-                if event_type in {
-                    "response.output_audio_transcript.delta",
-                    "response.audio_transcript.delta",
-                }:
-                    delta = event.get("delta")
-                    if isinstance(delta, str):
-                        transcript_chunks.append(delta)
-                    continue
+                    if event_type in {
+                        "response.output_audio_transcript.delta",
+                        "response.audio_transcript.delta",
+                    }:
+                        delta = event.get("delta")
+                        if isinstance(delta, str):
+                            transcript_chunks.append(delta)
+                        continue
 
-                if event_type == "error":
-                    raise Realtime2VoiceAgentError(self._error_message(event))
+                    if event_type == "error":
+                        raise Realtime2VoiceAgentError(self._error_message(event))
 
-                if event_type == "response.done":
-                    return "".join(transcript_chunks)
+                    if event_type == "response.done":
+                        return "".join(transcript_chunks)
+            except asyncio.CancelledError:
+                try:
+                    await websocket.send(json.dumps({"type": "response.cancel"}))
+                except Exception:
+                    pass
+                raise
 
         raise Realtime2VoiceAgentError("Realtime2 voice agent ended unexpectedly")
 

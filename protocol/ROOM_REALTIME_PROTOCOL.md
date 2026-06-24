@@ -322,6 +322,30 @@ text_chars: total character count from final transcript text
 estimated_speech_ms: sum of end_ms - start_ms when both are available
 ```
 
+## Voice Agent Barge-In
+
+Voice agent interruption is backend-internal and does not forward raw OpenAI
+events to the viewer.
+
+The backend interrupts an active agent response when:
+
+```text
+voice agent is speaking
+speaker_label is mapped to a human participant
+transcript text reaches the configured minimum character count
+```
+
+The backend must:
+
+```text
+send response.cancel to the Realtime session
+abort local Mac audio playback
+keep the human transcript for subsequent voice agent context
+not apply the normal post-agent audio mute delay
+```
+
+Mapped AI speakers and unassigned Soniox clusters must not trigger interruption.
+
 ## Raw Provider Payloads
 
 The frontend protocol must not depend on raw Soniox payload shape.

@@ -106,6 +106,11 @@ async def run_viewer_transcription() -> None:
                 for registry_event in registry_events:
                     await viewer_hub.broadcast(registry_event)
                 await viewer_hub.broadcast(enriched)
+                await interrupt_voice_agent_if_needed(
+                    settings=settings,
+                    voice_agent=voice_agent,
+                    event=event,
+                )
                 if await should_stats_handle(registry_events):
                     stats_event = speaker_stats.update_from_transcript(enriched)
                     if stats_event is not None:
@@ -159,6 +164,25 @@ async def should_voice_agent_handle(
     if await speaker_registry.is_agent_speaker(event.speaker_label):
         return False
     return True
+
+
+async def interrupt_voice_agent_if_needed(
+    *,
+    settings: Settings,
+    voice_agent: VoiceAgentOrchestrator,
+    event: TranscriptEvent,
+) -> None:
+    if not settings.voice_agent_barge_in_enabled:
+        return
+    if not voice_agent.is_speaking:
+        return
+    if len(event.text.strip()) < settings.voice_agent_barge_in_min_chars:
+        return
+    if not await speaker_registry.is_human_speaker(event.speaker_label):
+        return
+    await voice_agent.interrupt(
+        reason=f"mapped_human_speaker:{event.speaker_label}",
+    )
 
 
 async def should_stats_handle(registry_events: list[dict[str, object]]) -> bool:

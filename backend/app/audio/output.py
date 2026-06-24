@@ -9,6 +9,7 @@ class Pcm16AudioPlayer:
     def __init__(self, *, sample_rate: int) -> None:
         self._sample_rate = sample_rate
         self._stream = None
+        self._aborted = False
 
     def __enter__(self) -> Pcm16AudioPlayer:
         try:
@@ -23,12 +24,14 @@ class Pcm16AudioPlayer:
             blocksize=0,
         )
         self._stream.start()
+        self._aborted = False
         return self
 
     def __exit__(self, *args: object) -> None:
         if self._stream is None:
             return
-        self._stream.stop()
+        if not self._aborted:
+            self._stream.stop()
         self._stream.close()
         self._stream = None
 
@@ -36,3 +39,11 @@ class Pcm16AudioPlayer:
         if not pcm or self._stream is None:
             return
         self._stream.write(pcm)
+
+    def abort(self) -> None:
+        if self._stream is None:
+            return
+        self._aborted = True
+        self._stream.abort()
+        self._stream.close()
+        self._stream = None

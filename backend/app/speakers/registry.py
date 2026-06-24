@@ -133,6 +133,13 @@ class SpeakerRegistry:
             assignment = self._speaker_map.get(speaker_label)
             return assignment is not None and assignment.role == "agent"
 
+    async def is_human_speaker(self, speaker_label: str | None) -> bool:
+        if speaker_label is None:
+            return False
+        async with self._lock:
+            assignment = self._speaker_map.get(speaker_label)
+            return assignment is not None and assignment.role == "human"
+
     async def _update_participants(
         self,
         payload: dict[str, Any],
