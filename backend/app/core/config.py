@@ -34,6 +34,25 @@ class Settings(BaseSettings):
     voice_agent_barge_in_min_chars: int = Field(default=2, ge=1)
     speaker_intro_window_ms: int = Field(default=8000, ge=1000)
 
+    speaker_verification_backend: Literal[
+        "off",
+        "speechbrain",
+        "wespeaker",
+        "both",
+    ] = "off"
+    speaker_verification_ring_buffer_ms: int = Field(default=120000, ge=10000)
+    speaker_verification_min_enrollment_ms: int = Field(default=2000, ge=500)
+    speaker_verification_min_evaluation_ms: int = Field(default=1500, ge=500)
+    speaker_verification_queue_size: int = Field(default=32, ge=1)
+    speaker_verification_device: str = "cpu"
+    speaker_verification_speechbrain_model: str = (
+        "speechbrain/spkrec-ecapa-voxceleb"
+    )
+    speaker_verification_wespeaker_model: str = "campplus"
+    speaker_verification_results_path: str = (
+        "app/experiments/experiment-speaker-verification/results/evaluations.jsonl"
+    )
+
     soniox_api_key: str | None = None
     soniox_websocket_url: str = "wss://stt-rt.soniox.com/transcribe-websocket"
     soniox_model: str = "stt-rt-v5"

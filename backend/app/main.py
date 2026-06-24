@@ -9,10 +9,12 @@ from typing import TextIO
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from app.audio.mic_capture import microphone_pcm_frames
+from app.audio.ring_buffer import PcmRingBuffer, record_pcm_frames
 from app.core.config import Settings, get_settings
 from app.soniox.client import SonioxEvent, SonioxRealtimeClient, TranscriptEvent
 from app.speakers.registry import SpeakerRegistry
 from app.speakers.stats import SpeakerStats
+from app.speakers.verification.service import SpeakerVerificationService
 from app.viewer import viewer_hub
 from app.voice_agent.orchestrator import VoiceAgentOrchestrator
 
@@ -36,8 +38,19 @@ async def lifespan(app: FastAPI):
             pass
 
 
-speaker_registry = SpeakerRegistry(settings=get_settings())
-speaker_stats = SpeakerStats(settings=get_settings())
+settings = get_settings()
+speaker_registry = SpeakerRegistry(settings=settings)
+speaker_stats = SpeakerStats(settings=settings)
+speaker_audio_buffer = PcmRingBuffer(
+    sample_rate=settings.audio_sample_rate,
+    channels=settings.audio_channels,
+    max_duration_ms=settings.speaker_verification_ring_buffer_ms,
+)
+speaker_verification = SpeakerVerificationService(
+    settings=settings,
+    ring_buffer=speaker_audio_buffer,
+    event_sink=viewer_hub.broadcast,
+)
 app = FastAPI(lifespan=lifespan)
 
 
@@ -70,11 +83,13 @@ async def handle_viewer_message(raw_message: str) -> None:
     if not isinstance(payload, dict):
         return
     for event in await speaker_registry.handle_command(payload):
+        speaker_verification.handle_registry_event(event)
         await viewer_hub.broadcast(event)
 
 
 async def run_viewer_transcription() -> None:
     settings = get_settings()
+    await speaker_verification.start()
     await viewer_hub.broadcast(
         {
             "type": "session.started",
@@ -86,17 +101,21 @@ async def run_viewer_transcription() -> None:
         }
     )
     for event in await speaker_registry.state_events():
+        speaker_verification.handle_registry_event(event)
         await viewer_hub.broadcast(event)
     await viewer_hub.broadcast(speaker_stats.as_event())
 
     voice_agent = VoiceAgentOrchestrator(settings=settings)
     try:
         client = SonioxRealtimeClient(settings=settings)
-        audio_frames = microphone_pcm_frames(
-            sample_rate=settings.audio_sample_rate,
-            channels=settings.audio_channels,
-            frame_ms=settings.audio_frame_ms,
-            device=settings.audio_input_device,
+        audio_frames = record_pcm_frames(
+            microphone_pcm_frames(
+                sample_rate=settings.audio_sample_rate,
+                channels=settings.audio_channels,
+                frame_ms=settings.audio_frame_ms,
+                device=settings.audio_input_device,
+            ),
+            ring_buffer=speaker_audio_buffer,
         )
         async for event in client.transcribe(audio_frames):
             if isinstance(event, TranscriptEvent):
@@ -104,8 +123,10 @@ async def run_viewer_transcription() -> None:
                     event
                 )
                 for registry_event in registry_events:
+                    speaker_verification.handle_registry_event(registry_event)
                     await viewer_hub.broadcast(registry_event)
                 await viewer_hub.broadcast(enriched)
+                speaker_verification.observe_transcript(enriched)
                 await interrupt_voice_agent_if_needed(
                     settings=settings,
                     voice_agent=voice_agent,
@@ -126,7 +147,6 @@ async def run_viewer_transcription() -> None:
             elif not await speaker_registry.is_intro_active():
                 await voice_agent.handle_soniox_event(event)
     except asyncio.CancelledError:
-        await voice_agent.aclose()
         await viewer_hub.broadcast(
             {
                 "type": "session.ended",
@@ -137,7 +157,6 @@ async def run_viewer_transcription() -> None:
         )
         raise
     except Exception as exc:
-        await voice_agent.aclose()
         await viewer_hub.broadcast(
             {
                 "type": "transcription.error",
@@ -146,6 +165,9 @@ async def run_viewer_transcription() -> None:
                 "server_timestamp_ms": current_timestamp_ms(),
             }
         )
+    finally:
+        await voice_agent.aclose()
+        await speaker_verification.close()
 
 
 async def should_voice_agent_handle(
@@ -272,6 +294,11 @@ def print_startup_settings(
     print(f"  input_device: {input_device}", file=sys.stderr)
     print(f"  jsonl_output: {output}", file=sys.stderr)
     print(f"  voice_agent_enabled: {settings.voice_agent_enabled}", file=sys.stderr)
+    print(
+        f"  speaker_verification_backend: "
+        f"{settings.speaker_verification_backend}",
+        file=sys.stderr,
+    )
     if settings.voice_agent_enabled:
         print(
             f"  voice_agent_silence_ms: {settings.voice_agent_silence_ms}",

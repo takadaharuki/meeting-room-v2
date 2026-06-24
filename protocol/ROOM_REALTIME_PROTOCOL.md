@@ -346,6 +346,54 @@ not apply the normal post-agent audio mute delay
 
 Mapped AI speakers and unassigned Soniox clusters must not trigger interruption.
 
+## Speaker Verification Evaluation Events
+
+Speaker verification is an optional evaluation-only backend feature. It must not
+block Soniox streaming or automatically change speaker mapping.
+
+`speaker.verification.profile.ready` is emitted when self-introduction or early
+mapped audio has produced a participant profile for one backend.
+
+`speaker.verification.evaluated` contains per-backend scores and latency:
+
+```json
+{
+  "type": "speaker.verification.evaluated",
+  "meeting_id": "meeting_001",
+  "segment_ids": ["seg_000120"],
+  "speaker_label": "1",
+  "expected_participant_id": "p_001",
+  "audio_duration_ms": 3200,
+  "backends": {
+    "speechbrain": {
+      "status": "ok",
+      "scores": {"p_001": 0.86, "p_002": 0.42},
+      "top1_participant_id": "p_001",
+      "top1_score": 0.86,
+      "margin": 0.44,
+      "load_ms": 0.0,
+      "inference_ms": 170.0,
+      "correct": true
+    },
+    "wespeaker": {
+      "status": "ok",
+      "scores": {"p_001": 0.90, "p_002": 0.47},
+      "top1_participant_id": "p_001",
+      "top1_score": 0.90,
+      "margin": 0.43,
+      "load_ms": 0.0,
+      "inference_ms": 90.0,
+      "correct": true
+    }
+  },
+  "server_timestamp_ms": 1710000000000
+}
+```
+
+For an unassigned Soniox cluster, `expected_participant_id` and `correct` are
+`null`. The event is also written to development JSONL when evaluation is
+enabled.
+
 ## Raw Provider Payloads
 
 The frontend protocol must not depend on raw Soniox payload shape.

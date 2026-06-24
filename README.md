@@ -50,3 +50,37 @@ participants automatically.
 The `Live` tab also shows memory-only speaking stats per mapped participant or
 unassigned speaker: final utterance count, text character count, and estimated
 speech time from Soniox timestamps.
+
+## Speaker Verification Evaluation
+
+Run the same Soniox audio segments through either speaker embedding model:
+
+```bash
+./scripts/dev.sh --speaker-model off
+./scripts/dev.sh --speaker-model speechbrain
+./scripts/dev.sh --speaker-model wespeaker
+./scripts/dev.sh --speaker-model both
+```
+
+The first model-enabled run downloads optional dependencies and pretrained model
+files. Inference runs in a dedicated process per backend so Soniox streaming is
+not blocked.
+
+Evaluation JSONL defaults to:
+
+```text
+backend/app/experiments/experiment-speaker-verification/results/evaluations.jsonl
+```
+
+Use a different path with:
+
+```bash
+./scripts/dev.sh --speaker-model both \
+  --speaker-results app/experiments/experiment-speaker-verification/results/run-01.jsonl
+```
+
+Self-introduction audio is used for profile enrollment. Later mapped speaker
+segments are evaluated with an expected participant id. Unassigned Soniox
+clusters are scored against every available profile without an expected label.
+This mode records scores and latency only; it does not automatically remap a
+speaker.

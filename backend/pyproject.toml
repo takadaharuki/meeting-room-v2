@@ -12,6 +12,26 @@ dependencies = [
   "websockets>=14.0",
 ]
 
+[project.optional-dependencies]
+speaker-speechbrain = [
+  "speechbrain>=1.0.3",
+  "torch>=2.2",
+  "torchaudio>=2.2",
+]
+speaker-wespeaker = [
+  "onnxruntime>=1.18",
+  "torch>=2.2",
+  "torchaudio>=2.2",
+  "wespeaker @ git+https://github.com/wenet-e2e/wespeaker.git",
+]
+speaker-both = [
+  "onnxruntime>=1.18",
+  "speechbrain>=1.0.3",
+  "torch>=2.2",
+  "torchaudio>=2.2",
+  "wespeaker @ git+https://github.com/wenet-e2e/wespeaker.git",
+]
+
 [project.scripts]
 meeting-room-soniox = "app.main:main"
 

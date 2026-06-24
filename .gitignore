@@ -13,3 +13,5 @@ backend/app/experiments/experiment-soniox/results/*
 !backend/app/experiments/experiment-soniox/results/.gitkeep
 backend/app/experiments/experiment-realtime2/results/*
 !backend/app/experiments/experiment-realtime2/results/.gitkeep
+backend/app/experiments/experiment-speaker-verification/results/*
+!backend/app/experiments/experiment-speaker-verification/results/.gitkeep
